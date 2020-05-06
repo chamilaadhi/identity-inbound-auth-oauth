@@ -36,11 +36,13 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.model.OAuth2Parameters;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.utils.CarbonUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.INVALID_SCOPE;
 import static org.apache.oltu.oauth2.common.error.OAuthError.CodeResponse.UNAUTHORIZED_CLIENT;
@@ -172,7 +174,23 @@ public class AuthorizationHandlerManager {
                                   OAuthAuthzReqMessageContext authzReqMsgCtx, ResponseTypeHandler authzHandler)
             throws IdentityOAuth2Exception {
         boolean scopeValidationStatus = authzHandler.validateScope(authzReqMsgCtx);
-        if (!scopeValidationStatus) {
+        
+        Set<ScopeValidator> globalScopeValidators = OAuthServerConfiguration.getInstance().getGlobalScopeValidators();
+        
+        // setting to true so that if there are no global validators, we could ignore this.
+        boolean isGlobalValidScope = true;
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (validator.canHandle()) {
+                log.debug("Engaging global scope validator " + validator.getName());
+                isGlobalValidScope = validator.validateScope(authzReqMsgCtx);
+            }
+            // if one global validator fails, we skip other validators
+            if (!isGlobalValidScope) {
+                break;
+            }
+        }
+
+        if (!scopeValidationStatus || !isGlobalValidScope) {
             handleErrorRequest(authorizeRespDTO, INVALID_SCOPE, "Invalid Scope!");
             authorizeRespDTO.setCallbackURI(authzReqDTO.getCallbackUrl());
             if (log.isDebugEnabled()) {

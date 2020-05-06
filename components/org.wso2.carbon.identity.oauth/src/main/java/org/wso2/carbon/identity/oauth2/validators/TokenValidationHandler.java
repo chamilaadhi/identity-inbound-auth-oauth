@@ -38,10 +38,12 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2TokenValidationResponseDTO;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
 import org.wso2.carbon.identity.oauth2.model.AccessTokenDO;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 /**
@@ -184,7 +186,7 @@ public class TokenValidationHandler {
             return buildClientAppErrorResponse("Invalid access delegation");
         }
 
-        if (!tokenValidator.validateScope(messageContext)) {
+        if (!tokenValidator.validateScope(messageContext) || !validateGlobalScopes(messageContext)) {
             return buildClientAppErrorResponse("Scope validation failed");
         }
 
@@ -207,6 +209,26 @@ public class TokenValidationHandler {
         clientApp.setAccessTokenValidationResponse(responseDTO);
         clientApp.setConsumerKey(accessTokenDO.getConsumerKey());
         return clientApp;
+    }
+
+    private boolean validateGlobalScopes(OAuth2TokenValidationMessageContext messageContext)
+            throws IdentityOAuth2Exception {
+        Set<ScopeValidator> globalScopeValidators = OAuthServerConfiguration.getInstance().getGlobalScopeValidators();
+
+        // setting to true so that if there are no global validators, we could ignore this.
+        boolean isGlobalValidScope = true;
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (validator.canHandle()) {
+                log.debug("Engaging global scope validator " + validator.getName());
+                isGlobalValidScope = validator.validateScope(messageContext);
+            }
+            // if one global validator fails, we skip other validators
+            if (!isGlobalValidScope) {
+                break;
+            }
+        }
+
+        return isGlobalValidScope;
     }
 
     /**
@@ -347,7 +369,7 @@ public class TokenValidationHandler {
         }
 
         // Validate scopes.
-        if (!tokenValidator.validateScope(messageContext)) {
+        if (!tokenValidator.validateScope(messageContext) || !validateGlobalScopes(messageContext)) {
             // This is redundant. But for sake of readability.
             introResp.setActive(false);
             return buildIntrospectionErrorResponse("Scope validation failed");
@@ -459,7 +481,7 @@ public class TokenValidationHandler {
         }
 
         // Validate scopes.
-        if (!tokenValidator.validateScope(messageContext)) {
+        if (!tokenValidator.validateScope(messageContext) || !validateGlobalScopes(messageContext)) {
             // This is redundant. But sake of readability.
             introResp.setActive(false);
             return buildIntrospectionErrorResponse("Scope validation failed");

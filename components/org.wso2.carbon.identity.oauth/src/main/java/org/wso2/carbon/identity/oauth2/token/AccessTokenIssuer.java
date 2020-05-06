@@ -53,6 +53,7 @@ import org.wso2.carbon.identity.oauth2.token.bindings.TokenBinding;
 import org.wso2.carbon.identity.oauth2.token.handlers.grant.AuthorizationGrantHandler;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.validators.JDBCPermissionBasedInternalScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.identity.openidconnect.IDTokenBuilder;
 import org.wso2.carbon.utils.CarbonUtils;
 
@@ -61,6 +62,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static org.wso2.carbon.identity.oauth.common.OAuthConstants.GrantTypes.REFRESH_TOKEN;
@@ -278,7 +280,23 @@ public class AccessTokenIssuer {
         // the other scope validators.
         removeInternalScopes(tokReqMsgCtx);
         boolean isValidScope = authzGrantHandler.validateScope(tokReqMsgCtx);
-        if (isValidScope) {
+        
+        Set<ScopeValidator> globalScopeValidators = OAuthServerConfiguration.getInstance().getGlobalScopeValidators();
+        
+        // setting to true so that if there are no global validators, we could ignore this.
+        boolean isGlobalValidScope = true;
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (validator.canHandle()) {
+                log.debug("Engaging global scope validator " + validator.getName());
+                isGlobalValidScope = validator.validateScope(tokReqMsgCtx);
+            }
+            // if one global validator fails, we skip other validators
+            if (!isGlobalValidScope) {
+                break;
+            }
+        }
+
+        if (isValidScope && isGlobalValidScope) {
             //Add authorized internal scopes to the request for sending in the response.
             addAuthorizedInternalScopes(tokReqMsgCtx, authorizedInternalScopes);
         } else {
