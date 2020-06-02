@@ -82,6 +82,7 @@ import org.wso2.carbon.idp.mgt.IdentityProviderManager;
 import org.wso2.carbon.registry.core.Registry;
 import org.wso2.carbon.user.api.UserStoreException;
 import org.wso2.carbon.user.api.UserStoreManager;
+import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.service.RealmService;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
 import org.wso2.carbon.utils.multitenancy.MultitenantUtils;
@@ -335,11 +336,16 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
 
             String[] receivedRoles = currentRoleClaimValue.split(FrameworkUtils.getMultiAttributeSeparator());
             List<String> updatedRoleClaimValues = new ArrayList<>();
+            String updatedLocalRole;
             loop:
             for (String receivedRole : receivedRoles) {
                 for (RoleMapping roleMapping : permissionAndRoleConfig.getRoleMappings()) {
                     if (roleMapping.getRemoteRole().equals(receivedRole)) {
-                        updatedRoleClaimValues.add(roleMapping.getLocalRole().getLocalRoleName());
+                        updatedLocalRole = StringUtils.isEmpty(roleMapping.getLocalRole().getUserStoreId())
+                                ? roleMapping.getLocalRole().getLocalRoleName()
+                                : roleMapping.getLocalRole().getUserStoreId() + UserCoreConstants.DOMAIN_SEPARATOR
+                                        + roleMapping.getLocalRole().getLocalRoleName();
+                        updatedRoleClaimValues.add(updatedLocalRole);
                         continue loop;
                     }
                 }
@@ -531,9 +537,52 @@ public class SAML2BearerGrantHandler extends AbstractAuthorizationGrantHandler {
                                            IdentityProvider identityProvider, String tenantDomain)
             throws IdentityOAuth2Exception {
         setUserInMessageContext(tokReqMsgCtx, identityProvider, assertion, tenantDomain);
+        setUserRolesInMessageContext(tokReqMsgCtx, identityProvider, assertion, tenantDomain);
         tokReqMsgCtx.setScope(tokReqMsgCtx.getOauth2AccessTokenReqDTO().getScope());
         // Storing the Assertion. This will be used in OpenID Connect for example
         tokReqMsgCtx.addProperty(OAuthConstants.OAUTH_SAML2_ASSERTION, assertion);
+    }
+
+    private void setUserRolesInMessageContext(OAuthTokenReqMessageContext tokReqMsgCtx,
+            IdentityProvider identityProvider, Assertion assertion, String tenantDomain) {
+        
+        if (OAuthServerConfiguration.getInstance().isRoleReadFromAssersionEnabled()) {
+            String claimURI = identityProvider.getClaimConfig().getRoleClaimURI();
+            Map<String, String> attributes = ClaimsUtil.extractClaimsFromAssertion(tokReqMsgCtx, null, assertion,
+                    FrameworkUtils.getMultiAttributeSeparator());
+            
+            String roles = attributes.get(claimURI);
+            if (!StringUtils.isEmpty(roles)) {
+                String[] rolesArray = roles.split(FrameworkUtils.getMultiAttributeSeparator()); 
+                String updatedRoleClaimValue;
+                List<String> updatedRoles = new ArrayList<>();
+                // get the mapped role 
+                for (String role : rolesArray) {
+                    updatedRoleClaimValue = getUpdatedRoleClaimValue(identityProvider, role);
+                    if (updatedRoleClaimValue != null) {
+                        updatedRoles.add(updatedRoleClaimValue);
+                    } else {
+                        updatedRoles.add(role);
+                    }
+                }
+
+                AuthenticatedUser user = tokReqMsgCtx.getAuthorizedUser();
+                Map<ClaimMapping, String> userAttributes = user.getUserAttributes();
+                if (log.isDebugEnabled()) {
+                    log.debug("Mapped roles to claim " + FrameworkConstants.LOCAL_ROLE_CLAIM_URI + " : "
+                            + updatedRoles.toString());
+                }
+                
+                //TODO check whether we hv to get the existing claims and check and update
+                userAttributes.put(
+                        ClaimMapping.build(FrameworkConstants.LOCAL_ROLE_CLAIM_URI,
+                                FrameworkConstants.LOCAL_ROLE_CLAIM_URI, null, false),
+                        updatedRoles.toString().replace(" ", ""));
+                user.setUserAttributes(userAttributes);
+                tokReqMsgCtx.setAuthorizedUser(user);
+            }
+
+        }
     }
 
     private void invokeExtension(OAuthTokenReqMessageContext tokReqMsgCtx) throws IdentityOAuth2Exception {

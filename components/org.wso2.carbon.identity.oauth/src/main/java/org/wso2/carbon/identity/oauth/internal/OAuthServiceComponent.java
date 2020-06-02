@@ -37,6 +37,8 @@ import org.wso2.carbon.identity.oauth.listener.IdentityOathEventListener;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.internal.OAuth2ServiceComponentHolder;
+import org.wso2.carbon.identity.oauth2.validators.scope.RoleBasedScopeValidator;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.registry.core.service.RegistryService;
 import org.wso2.carbon.user.core.listener.UserOperationEventListener;
 import org.wso2.carbon.user.core.service.RealmService;
@@ -79,6 +81,9 @@ public class OAuthServiceComponent {
 
             OAuthComponentServiceHolder.getInstance().setOAuthAdminService(oauthAdminService);
             OAuth2ServiceComponentHolder.getInstance().setOAuthAdminService(oauthAdminService);
+            
+            // Set the default scope handler. need to enable it from the identity.xml file
+            OAuthComponentServiceHolder.getInstance().setScopeValidator(new RoleBasedScopeValidator());
 
             if (log.isDebugEnabled()) {
                 log.debug("Identity OAuth bundle is activated");
@@ -246,5 +251,28 @@ public class OAuthServiceComponent {
             log.debug("Un-setting the token binder info for: " + tokenBinderInfo.getBindingType());
         }
         OAuthComponentServiceHolder.getInstance().removeTokenBinderInfo(tokenBinderInfo);
+    }
+    
+    @Reference(
+            name = "scope.validator.service",
+            service = ScopeValidator.class,
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policy = ReferencePolicy.DYNAMIC,
+            unbind = "uetScopeValidatorService"
+    )
+    protected void setScopeValidatorService(ScopeValidator scopeValidator) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Setting the Scope validator Service");
+        }
+        OAuthComponentServiceHolder.getInstance().setScopeValidator(scopeValidator);
+    }
+
+    protected void uetScopeValidatorService(ScopeValidator oauth2ScopeService) {
+
+        if (log.isDebugEnabled()) {
+            log.debug("Un-setting the Scope validator Service");
+        }
+        OAuthComponentServiceHolder.getInstance().setScopeValidator(null);
     }
 }

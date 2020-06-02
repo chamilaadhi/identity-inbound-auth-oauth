@@ -29,6 +29,7 @@ import org.wso2.carbon.identity.oauth.callback.OAuthCallbackManager;
 import org.wso2.carbon.identity.oauth.common.OAuthConstants;
 import org.wso2.carbon.identity.oauth.config.OAuthServerConfiguration;
 import org.wso2.carbon.identity.oauth.dao.OAuthAppDO;
+import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth2.IdentityOAuth2Exception;
 import org.wso2.carbon.identity.oauth2.authz.OAuthAuthzReqMessageContext;
 import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeReqDTO;
@@ -36,6 +37,7 @@ import org.wso2.carbon.identity.oauth2.dto.OAuth2AuthorizeRespDTO;
 import org.wso2.carbon.identity.oauth2.token.OauthTokenIssuer;
 import org.wso2.carbon.identity.oauth2.util.OAuth2Util;
 import org.wso2.carbon.identity.oauth2.util.Oauth2ScopeUtils;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,7 +103,22 @@ public abstract class AbstractResponseTypeHandler implements ResponseTypeHandler
                 .getAuthorizationCodeValidityPeriod());
         oauthAuthzMsgCtx.setAccessTokenIssuedTime(scopeValidationCallback.getAccessTokenValidityPeriod());
         oauthAuthzMsgCtx.setApprovedScope(scopeValidationCallback.getApprovedScope());
-        return scopeValidationCallback.isValidScope();
+        
+        List<ScopeValidator> globalScopeValidators = OAuthComponentServiceHolder.getInstance().getScopeValidators();
+        
+        // setting to true so that if there are no global validators, we could ignore this.
+        boolean isGlobalValidScope = true;
+        for (ScopeValidator validator : globalScopeValidators) {
+            if (validator.canHandle()) {
+                log.debug("Engaging global scope validator " + validator.getName());
+                isGlobalValidScope = validator.validateScope(oauthAuthzMsgCtx);
+            }
+            // if one global validator fails, we skip other validators
+            if (!isGlobalValidScope) {
+                break;
+            }
+        }
+        return scopeValidationCallback.isValidScope() && isGlobalValidScope;
     }
 
     @Override

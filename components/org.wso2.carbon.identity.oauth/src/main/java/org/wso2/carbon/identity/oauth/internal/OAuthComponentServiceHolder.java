@@ -26,6 +26,7 @@ import org.wso2.carbon.identity.oauth.dto.TokenBindingMetaDataDTO;
 import org.wso2.carbon.identity.oauth.event.OAuthEventInterceptor;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
+import org.wso2.carbon.identity.oauth2.validators.scope.ScopeValidator;
 import org.wso2.carbon.registry.api.RegistryService;
 import org.wso2.carbon.user.core.service.RealmService;
 
@@ -46,6 +47,7 @@ public class OAuthComponentServiceHolder {
     private OAuth2ScopeService oauth2ScopeService;
     private List<TokenBindingMetaDataDTO> tokenBindingMetaDataDTOs = new ArrayList<>();
     private OAuthAdminServiceImpl oAuthAdminService;
+    private List<ScopeValidator> scopeValidators = new ArrayList<>();
 
     private OAuthComponentServiceHolder() {
 
@@ -128,5 +130,18 @@ public class OAuthComponentServiceHolder {
     public void setOAuthAdminService(OAuthAdminServiceImpl oAuthAdminService) {
 
         this.oAuthAdminService = oAuthAdminService;
+    }
+
+    public void setScopeValidator(ScopeValidator scopeValidator) {
+        scopeValidators.add(scopeValidator);
+        
+    }
+
+    public List<ScopeValidator> getScopeValidators() {
+        return scopeValidators;
+    }
+
+    public void setScopeValidators(List<ScopeValidator> scopeValidators) {
+        this.scopeValidators = scopeValidators;
     }
 }

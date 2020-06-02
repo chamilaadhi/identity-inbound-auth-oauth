@@ -263,6 +263,9 @@ public class OAuthServerConfiguration {
     // Property to determine whether data providers should be executed during token introspection.
     private boolean enableIntrospectionDataProviders = false;
 
+    private boolean isRoleBasedScopeValidatorEnabled = false;
+    private boolean isRoleReadFromAssersionEnabled = false;
+
     private OAuthServerConfiguration() {
         buildOAuthServerConfiguration();
     }
@@ -416,6 +419,12 @@ public class OAuthServerConfiguration {
 
         // Read the property for error redirection URI
         parseRedirectToOAuthErrorPageConfig(oauthElem);
+        
+        // Read config for role based scope validator.
+        parseEnableRoleBasedScopeValidatorConfiguration(oauthElem);
+        
+        // Read config for reading roles from the assersion.
+        parseEnableReadingRolesFromAssersion(oauthElem);
     }
 
     private void parseTokenIntrospectionConfig(OMElement oauthElem) {
@@ -2802,6 +2811,40 @@ public class OAuthServerConfiguration {
             log.debug("Redirecting to OAuth2 Error page is set to : " + redirectToOAuthErrorPageElem);
         }
     }
+    
+    /**
+     * Parse role-based scope validation configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseEnableRoleBasedScopeValidatorConfiguration(OMElement oauthConfigElem) {
+
+        OMElement enableRoleBasedScopeElem = oauthConfigElem.getFirstChildWithName(getQNameWithIdentityNS(
+                ConfigElements.ENABLE_ROLE_BASED_SCOPE_VALIDATOR));
+        if (enableRoleBasedScopeElem != null) {
+            isRoleBasedScopeValidatorEnabled = Boolean.parseBoolean(enableRoleBasedScopeElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("EnableRoleBasedScopeValidator was set to : " + isRoleBasedScopeValidatorEnabled);
+        }
+    }
+    
+    /**
+     * Parse read roles from assertion configuration.
+     *
+     * @param oauthConfigElem oauthConfigElem.
+     */
+    private void parseEnableReadingRolesFromAssersion(OMElement oauthConfigElem) {
+
+        OMElement readRolesFromAssersionElem = oauthConfigElem
+                .getFirstChildWithName(getQNameWithIdentityNS(ConfigElements.READ_ROLES_FROM_ASSERTION));
+        if (readRolesFromAssersionElem != null) {
+            isRoleReadFromAssersionEnabled = Boolean.parseBoolean(readRolesFromAssersionElem.getText());
+        }
+        if (log.isDebugEnabled()) {
+            log.debug("ReadRolesFromAssertion was set to : " + isRoleReadFromAssersionEnabled);
+        }
+    }
 
     public OAuth2ScopeValidator getoAuth2ScopeValidator() {
         return oAuth2ScopeValidator;
@@ -2829,6 +2872,14 @@ public class OAuthServerConfiguration {
 
     public void setOAuth2ScopeHandlers(Set<OAuth2ScopeHandler> oAuth2ScopeHandlers) {
         this.oAuth2ScopeHandlers = oAuth2ScopeHandlers;
+    }
+    
+    public boolean isRoleBasedScopeValidatorEnabled() {
+        return isRoleBasedScopeValidatorEnabled;
+    }
+    
+    public boolean isRoleReadFromAssersionEnabled() {
+        return isRoleReadFromAssersionEnabled;
     }
 
     private void parseUseSPTenantDomainConfig(OMElement oauthElem) {
@@ -3100,6 +3151,12 @@ public class OAuthServerConfiguration {
 
         // Enable/Disable token renewal on each request to the token endpoint
         private static final String RENEW_TOKEN_PER_REQUEST = "RenewTokenPerRequest";
+        
+        // Enable/Disable rolebased scope validation
+        private static final String ENABLE_ROLE_BASED_SCOPE_VALIDATOR = "EnableRoleBasedScopeValidator";
+        
+        // Enable/Disable reading roles from jwt/saml Assertion
+        private static final String READ_ROLES_FROM_ASSERTION = "ReadRolesFromAssertion";
     }
 
 }
