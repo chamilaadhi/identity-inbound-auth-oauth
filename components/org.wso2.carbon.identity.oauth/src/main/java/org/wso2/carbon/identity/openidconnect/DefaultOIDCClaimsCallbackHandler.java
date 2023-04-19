@@ -671,7 +671,10 @@ public class DefaultOIDCClaimsCallbackHandler implements CustomClaimsCallbackHan
      * @return true if the token user attributes has non OIDC claims.
      */
     private boolean isTokenHasCustomUserClaims(RefreshTokenValidationDataDO refreshTokenValidationDataDO) {
-
+        
+        if (refreshTokenValidationDataDO.getAccessToken() == null) {
+            return false;
+        }
         AuthorizationGrantCacheKey cacheKey = new AuthorizationGrantCacheKey(
                 refreshTokenValidationDataDO.getAccessToken());
         AuthorizationGrantCacheEntry cacheEntry = AuthorizationGrantCache.getInstance()
