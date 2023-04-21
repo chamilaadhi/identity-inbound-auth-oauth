@@ -45,7 +45,6 @@ import org.wso2.carbon.identity.oauth.dto.ScopeDTO;
 import org.wso2.carbon.identity.oauth.internal.OAuthComponentServiceHolder;
 import org.wso2.carbon.identity.oauth.tokenprocessor.OAuth2RevocationProcessor;
 import org.wso2.carbon.identity.oauth.tokenprocessor.RefreshTokenGrantProcessor;
-import org.wso2.carbon.identity.oauth2.ExternalTokenService;
 import org.wso2.carbon.identity.oauth2.OAuth2ScopeService;
 import org.wso2.carbon.identity.oauth2.OAuth2Service;
 import org.wso2.carbon.identity.oauth2.OAuth2TokenValidationService;
@@ -636,29 +635,6 @@ public class OAuth2ServiceComponent {
             log.debug("Unset organization user resident resolver service.");
         }
         OAuth2ServiceComponentHolder.setOrganizationUserResidentResolverService(null);
-    }
-    
-    @Reference(
-            name = "external.token.service",
-            service = ExternalTokenService.class,
-            cardinality = ReferenceCardinality.OPTIONAL,
-            policy = ReferencePolicy.DYNAMIC,
-            unbind = "unsetExternalTokenService"
-    )
-    protected void setExternalTokenService(ExternalTokenService externalTokenService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Setting ExternalTokenService service.");
-        }
-        OAuth2ServiceComponentHolder.getInstance().setExternalTokenService(externalTokenService);
-    }
-
-    protected void unsetExternalTokenService(ExternalTokenService externalTokenService) {
-
-        if (log.isDebugEnabled()) {
-            log.debug("Unset ExternalTokenService service.");
-        }
-        OAuth2ServiceComponentHolder.getInstance().setExternalTokenService(null);
     }
 
     @Reference(
