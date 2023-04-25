@@ -62,6 +62,7 @@ public class OAuthComponentServiceHolder {
     private OrganizationUserResidentResolverService organizationUserResidentResolverService;
     private AccessTokenDAO accessTokenDAOService;
     private TokenManagementDAO tokenManagementDAOService;
+    private OAuthApplicationMgtListener oAuthApplicationMgtListener;
     
     /**
      * Get the list of scope validator implementations available.
