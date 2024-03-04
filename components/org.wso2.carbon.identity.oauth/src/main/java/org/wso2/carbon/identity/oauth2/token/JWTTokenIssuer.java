@@ -87,6 +87,8 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
 
     private static final String AUTHORIZATION_PARTY = "azp";
     private static final String CLIENT_ID = "client_id";
+    private static final String APP_DOMAIN = "app_domain";
+    private static final String USER_DOMAIN = "user_domain";
     private static final String AUDIENCE = "aud";
     private static final String SCOPE = "scope";
     private static final String TOKEN_BINDING_REF = "binding_ref";
@@ -459,6 +461,11 @@ public class JWTTokenIssuer extends OauthTokenIssuerImpl {
         jwtClaimsSetBuilder.notBeforeTime(new Date(curTimeInMillis));
         jwtClaimsSetBuilder.claim(CLIENT_ID, consumerKey);
 
+        if (OAuthServerConfiguration.getInstance().isAddTenantDomainToTokenEnabled()) {
+            jwtClaimsSetBuilder.claim(APP_DOMAIN, oAuthAppDO.getAppOwner().getTenantDomain());
+            jwtClaimsSetBuilder.claim(USER_DOMAIN, authenticatedUser.getTenantDomain());
+        }
+        
         String scope = getScope(authAuthzReqMessageContext, tokenReqMessageContext);
         if (StringUtils.isNotEmpty(scope)) {
             jwtClaimsSetBuilder.claim(SCOPE, scope);
