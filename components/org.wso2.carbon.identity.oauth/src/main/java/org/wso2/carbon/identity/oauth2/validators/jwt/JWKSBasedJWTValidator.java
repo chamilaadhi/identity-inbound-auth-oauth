@@ -30,6 +30,7 @@ import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.RemoteJWKSet;
 import com.nimbusds.jose.proc.BadJOSEException;
 import com.nimbusds.jose.proc.JWSKeySelector;
+import com.nimbusds.jose.proc.JWSTypeVerifier;
 import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jose.proc.SimpleSecurityContext;
@@ -72,6 +73,10 @@ public class JWKSBasedJWTValidator implements JWTValidator {
         /* Set up a JWT processor to parse the tokens and then check their signature and validity time window
         (bounded by the "iat", "nbf" and "exp" claims). */
         this.jwtProcessor = new DefaultJWTProcessor<>();
+        // Accept all JWT types for backward compatibility (nimbus 8.0+ enforces "typ" header by default).
+        jwtProcessor.setJWSTypeVerifier((JWSTypeVerifier<SecurityContext>) (type, context) -> {
+            // Do nothing - all types are accepted.
+        });
     }
 
     @Override

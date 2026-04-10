@@ -21,9 +21,9 @@ package org.wso2.carbon.identity.oauth.endpoint.ciba;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.Payload;
 import com.nimbusds.jose.util.Base64URL;
+import com.nimbusds.jose.util.JSONObjectUtils;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
-import net.minidev.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -159,7 +159,7 @@ public class CibaAuthRequestValidator {
                 return;
             }
             Map<String, Object> claims = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
-            if (StringUtils.isBlank(new JSONObject(claims).toJSONString())) {
+            if (StringUtils.isBlank(JSONObjectUtils.toJSONString(claims))) {
                 if (log.isDebugEnabled()) {
                     log.debug("Invalid CIBA Authentication Request made by client with clientID : " +
                             claimsSet.getIssuer() + ".The request is with invalid  " +
@@ -795,7 +795,7 @@ public class CibaAuthRequestValidator {
             // Setting transaction_context to AuthenticationRequest after successful validation.
             Map<String, Object> transactionContext = claimsSet.getJSONObjectClaim(CibaConstants.TRANSACTION_CONTEXT);
             if (transactionContext != null) {
-                cibaAuthCodeRequest.setTransactionContext(new JSONObject(transactionContext).toJSONString());
+                cibaAuthCodeRequest.setTransactionContext(JSONObjectUtils.toJSONString(transactionContext));
             }
 
             // Setting requested_expiry to AuthenticationRequest after successful validation.
